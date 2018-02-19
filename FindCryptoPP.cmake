@@ -5,7 +5,7 @@ find_path(CryptoPP_INCLUDE_DIR
 )
 
 find_library(CryptoPP_LIBRARY
-    NAMES cryptopp-static
+    NAMES cryptopp cryptopp-static
     PATHS ${CONAN_LIB_DIRS_CRYPTOPP}
     NO_DEFAULT_PATH
 )
