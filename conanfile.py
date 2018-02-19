@@ -14,7 +14,7 @@ class CryptoppConan(ConanFile):
         "arch": ["x86_64", "x86"]
     }
     generators = "cmake"
-    exports_sources = "src/*", "CMakeLists.txt"
+    exports_sources = "src/*", "CMakeLists.txt", "FindCryptoPP.cmake"
     no_copy_source = True
     build_policy = "missing"
 
@@ -34,6 +34,7 @@ class CryptoppConan(ConanFile):
         cmake.build()
 
     def package(self):
+        self.copy("FindCryptoPP.cmake", src=".", dst=".")
         self.copy("*.h", src="src", dst="include/cryptopp", keep_path=True)
         self.copy("*.a", dst="lib", keep_path=False)
         self.copy("*cryptopp-static.lib", dst="lib", keep_path=False)

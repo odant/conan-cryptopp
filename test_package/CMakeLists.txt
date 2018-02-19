@@ -4,10 +4,12 @@ cmake_minimum_required(VERSION 3.0)
 include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
+find_package(CryptoPP REQUIRED)
+
 enable_testing()
 
 add_executable(test_package test_package.cpp)
-target_link_libraries(test_package CONAN_PKG::cryptopp)
+target_link_libraries(test_package CryptoPP::CryptoPP)
 set_target_properties(test_package
     PROPERTIES
     INSTALL_RPATH "$ORIGIN"
