@@ -1,5 +1,4 @@
-from conans import ConanFile, AutoToolsBuildEnvironment, tools
-import os
+from conans import ConanFile, CMake, tools
 
 
 class CryptoppConan(ConanFile):
@@ -14,9 +13,9 @@ class CryptoppConan(ConanFile):
         "build_type": ["Debug", "Release"],
         "arch": ["x86_64", "x86"]
     }
-    #generators = "cmake"
-    exports_sources = "src/*"
-    no_copy_source = False # Build in source
+    generators = "cmake"
+    exports_sources = "src/*", "CMakeLists.txt"
+    no_copy_source = True
     build_policy = "missing"
 
     def configure(self):
@@ -25,32 +24,19 @@ class CryptoppConan(ConanFile):
             if self.settings.compiler.libcxx == "libstdc++":
                 raise Exception("This package is only compatible with libstdc++11")
 
-    def requirements(self):
-        pass
-        #self.requires("zlib/[~=1.2.11]@%s/stable" % self.user)
-        #self.requires("openssl/[~=1.1.0g]@%s/testing" % self.user)
-        #self.requires("boost/1.66.0@%s/testing" % self.user)
-
     def build(self):
-        if self.settings.os == "Windows":
-            pass
-        else:
-            self.build_unix()
-        
-    def build_unix(self):
-        env_build = AutoToolsBuildEnvironment(self)
-        env_build.fpic = True
-        env_vars = env_build.vars
-        env_vars["VERBOSE"] = "1"
-        with tools.environment_append(env_vars), tools.chdir(os.path.join(self.source_folder, "src")):
-            self.run("env")
-            self.run("make -j%s static" % tools.cpu_count())
+        cmake = CMake(self)
+        cmake.definitions["CMAKE_POSITION_INDEPENDENT_CODE:BOOL"] = "ON"
+        cmake.definitions["BUILD_STATIC:BOOL"] = "ON"
+        cmake.definitions["BUILD_SHARED:BOOL"] = "OFF"
+        cmake.definitions["BUILD_TESTING:BOOL"] = "OFF"
+        cmake.configure()
+        cmake.build()
 
     def package(self):
-        self.copy("*.h", dst="include/cryptopp", keep_path=True)
-        self.copy("*.a", dst="lib")
-        self.copy("*.lib", dst="lib")
+        self.copy("*.h", src="src", dst="include/cryptopp", keep_path=True)
+        self.copy("*.a", dst="lib", keep_path=False)
+        self.copy("*cryptopp-static.lib", dst="lib", keep_path=False)
 
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)
-        #self.cpp_info.defines = ["PION_STATIC_LINKING"]
