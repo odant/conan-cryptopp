@@ -38,6 +38,9 @@ class CryptoppConan(ConanFile):
         self.copy("*.h", src="src", dst="include/cryptopp", keep_path=True)
         self.copy("*.a", dst="lib", keep_path=False)
         self.copy("*cryptopp-static.lib", dst="lib", keep_path=False)
+        self.copy("*cryptopp-object.pdb", dst="bin", keep_path=False)
 
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)
+
+        
