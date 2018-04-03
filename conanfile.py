@@ -20,9 +20,9 @@ class CryptoppConan(ConanFile):
 
     def configure(self):
         # Only C++11
-        if "libcxx" in self.settings.compiler.fields:
-            if self.settings.compiler.libcxx == "libstdc++":
-                raise Exception("This package is only compatible with libstdc++11")
+        # Only C++11
+        if self.settings.compiler.get_safe("libcxx") == "libstdc++":
+            raise ConanException("This package is only compatible with libstdc++11")
 
     def build(self):
         cmake = CMake(self)
