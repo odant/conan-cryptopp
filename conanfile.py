@@ -19,10 +19,12 @@ class CryptoppConan(ConanFile):
     build_policy = "missing"
 
     def configure(self):
-        # Only C++11
+        toolset = str(self.settings.compiler.get_safe("toolset"))
+        if toolset.endswith("_xp"):
+            raise Exception("This package is not compatible Windows XP")
         # Only C++11
         if self.settings.compiler.get_safe("libcxx") == "libstdc++":
-            raise ConanException("This package is only compatible with libstdc++11")
+            raise Exception("This package is only compatible with libstdc++11")
 
     def build(self):
         cmake = CMake(self)
