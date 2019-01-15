@@ -56,12 +56,12 @@ class CryptoppConan(ConanFile):
             ])
         else:
             cxx_flags.extend([
+            "-DCRYPTOPP_DISABLE_ASM",
             "-g3",
             "-O0"
             ])
         env = {
             "CXXFLAGS": " ".join(cxx_flags),
-            "PREFIX": self.package_folder
         }
         with tools.environment_append(env), tools.chdir("src"):
             self.run("make static -j %s" % tools.cpu_count())
