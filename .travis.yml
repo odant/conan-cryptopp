@@ -3,7 +3,7 @@ env:
     CONAN_PRINT_RUN_COMMANDS: 1
     CONAN_LOG_RUN_TO_OUTPUT: 1
 
-    CONAN_REFERENCE: cryptopp/5.6.5
+    CONAN_REFERENCE: cryptopp/8.0.0+0
     CONAN_USERNAME: odant
     CONAN_CHANNEL: testing
     CONAN_STABLE_CHANNEL: stable
@@ -11,6 +11,8 @@ env:
     CONAN_UPLOAD: https://conan.kysa.me
     CONAN_LOGIN_USERNAME: travis
     CONAN_STABLE_BRANCH_PATTERN: release/*
+
+    WITH_UNIT_TESTS: 1
 
 linux: &linux_build
   os: linux
@@ -25,26 +27,50 @@ matrix:
   include:
     - <<: *linux_build
       env:
+       CONAN_GCC_VERSIONS: 5
+       CONAN_DOCKER_IMAGE: conanio/gcc5
+       CONAN_ARCHS: x86_64
+
+    - <<: *linux_build
+      env:
+       CONAN_GCC_VERSIONS: 5
+       CONAN_DOCKER_IMAGE: conanio/gcc5
+       CONAN_ARCHS: x86
+
+    - <<: *linux_build
+      env:
        CONAN_GCC_VERSIONS: 6
-       CONAN_DOCKER_IMAGE: lasote/conangcc63
+       CONAN_DOCKER_IMAGE: conanio/gcc6
        CONAN_ARCHS: x86_64
 
     - <<: *linux_build
       env:
        CONAN_GCC_VERSIONS: 6
-       CONAN_DOCKER_IMAGE: lasote/conangcc63
+       CONAN_DOCKER_IMAGE: conanio/gcc6
        CONAN_ARCHS: x86
 
     - <<: *linux_build
       env:
        CONAN_GCC_VERSIONS: 7
-       CONAN_DOCKER_IMAGE: lasote/conangcc72
+       CONAN_DOCKER_IMAGE: conanio/gcc7
        CONAN_ARCHS: x86_64
 
     - <<: *linux_build
       env:
        CONAN_GCC_VERSIONS: 7
-       CONAN_DOCKER_IMAGE: lasote/conangcc72
+       CONAN_DOCKER_IMAGE: conanio/gcc7
+       CONAN_ARCHS: x86
+
+    - <<: *linux_build
+      env:
+       CONAN_GCC_VERSIONS: 8
+       CONAN_DOCKER_IMAGE: conanio/gcc8
+       CONAN_ARCHS: x86_64
+
+    - <<: *linux_build
+      env:
+       CONAN_GCC_VERSIONS: 8
+       CONAN_DOCKER_IMAGE: conanio/gcc8
        CONAN_ARCHS: x86
 
 install:

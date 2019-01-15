@@ -6,10 +6,9 @@ from conan.packager import ConanMultiPackager
 # Common settings
 username = "odant" if "CONAN_USERNAME" not in os.environ else None
 # Windows settings
-visual_versions = ["14", "15"] if "CONAN_VISUAL_VERSIONS" not in os.environ else None
+visual_versions = ["15"] if "CONAN_VISUAL_VERSIONS" not in os.environ else None
 visual_runtimes = ["MD", "MDd"] if "CONAN_VISUAL_RUNTIMES" not in os.environ else None
-if "CONAN_VISUAL_TOOLSETS" in os.environ:
-    visual_toolsets = [s.strip() for s in os.environ["CONAN_VISUAL_TOOLSETS"].split(",")]
+with_unit_tests = True if "WITH_UNIT_TESTS" in os.environ else False
 
 def filter_libcxx(builds):
     result = []
@@ -17,7 +16,15 @@ def filter_libcxx(builds):
         if settings["compiler.libcxx"] == "libstdc++11":
             result.append([settings, options, env_vars, build_requires, reference])
     return result
-    
+
+def add_with_unit_tests(builds):
+    result = []
+    for settings, options, env_vars, build_requires, reference in builds:
+        options = deepcopy(options)
+        options["cryptopp:with_unit_tests"] = True
+        result.append([settings, options, env_vars, build_requires, reference])
+    return result
+
 if __name__ == "__main__":
     builder = ConanMultiPackager(
         username=username,
@@ -30,6 +37,8 @@ if __name__ == "__main__":
     builds = builder.items
     if platform.system() == "Linux":
         builds = filter_libcxx(builds)
+    if with_unit_tests:
+        builds = add_with_unit_tests(builds)
     # Replace build configurations
     builder.items = []
     for settings, options, env_vars, build_requires, _ in builds:
