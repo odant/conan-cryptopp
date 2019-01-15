@@ -10,31 +10,61 @@
 # See http://www.cryptopp.com/wiki/iOS_(Command_Line) for more details
 # ====================================================================
 
-PLATFORMS=(iPhoneOS iPhoneSimulator WatchOS WatchSimulator AppleTVOS AppleTVSimulator)
+if [ -z $(command -v ./setenv-ios.sh) ]; then
+	echo "Failed to locate setenv-ios.sh"
+	ls -Al *.sh
+	[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
+fi
+
+if [ -z "${PLATFORM-}" ]; then
+	PLATFORMS=(iPhoneOS iPhoneSimulator Arm64 WatchOS WatchSimulator AppleTVOS AppleTVSimulator)
+else
+	PLATFORMS=(${PLATFORM})
+fi
+
 for platform in ${PLATFORMS[@]}
 do
 	make -f GNUmakefile-cross distclean > /dev/null 2>&1
 
-	MESSAGE="Testing for Xcode support of $platform"
-	LEN=${#MESSAGE}
-	HEADER=$(seq  -f "*" -s '' $LEN)
-
 	echo
-	echo "$HEADER"
-	echo "$MESSAGE"
+	echo "====================================================="
+	echo "Testing for iOS support of $platform"
 
 	# Test if we can set the environment for the platform
-	./setenv-ios.sh "$platform" > /dev/null 2>&1
+	./setenv-ios.sh "$platform"
 
-	if [ "$?" -eq "0" ]; then
-		echo
-		echo "Building for $platform..."
-		echo
-
-		. ./setenv-ios.sh "$platform"
-		make -f GNUmakefile-cross static dynamic cryptest.exe
-	else
+	if [ "$?" -ne "0" ];
+	then
 		echo
 		echo "$platform not supported by Xcode"
+		echo "$platform ==> FAILURE" >> /tmp/build.log
+
+		touch /tmp/build.failed
+		continue
 	fi
+
+	echo
+	echo "Building for $platform using $runtime..."
+	echo
+
+	# run in subshell to not keep any env vars
+	(
+		source ./setenv-ios.sh "$platform" > /dev/null 2>&1
+		make -f GNUmakefile-cross static dynamic cryptest.exe
+		if [ "$?" -eq "0" ]; then
+			echo "$platform ==> SUCCESS" >> /tmp/build.log
+		else
+			echo "$platform ==> FAILURE" >> /tmp/build.log
+			touch /tmp/build.failed
+		fi
+	)
 done
+
+cat /tmp/build.log
+
+# let the script fail if any of the builds failed
+if [ -f /tmp/build.failed ]; then
+	[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
+fi
+
+[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 0 || return 0
