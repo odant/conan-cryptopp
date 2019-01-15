@@ -40,9 +40,27 @@ class CryptoppConan(ConanFile):
         pass
 
     def build_unix(self):
-        cxx_flags = "-DNDEBUG -g2 -O3 -std=c++11 -fPIC" if self.settings.build_type == "Release" else "-g3 -O0 -std=c++11 -fPIC"
+        cxx_flags = [
+            "-std=c++11",
+            "-fPIC"
+        ]
+        if self.settings.arch == "x86":
+            cxx_flags.append("-m32")
+        elif self.settings.arch == "x86_64":
+            cxx_flags.append("-m64")
+        if self.settings.build_type == "Release":
+            cxx_flags.extend([
+            "-DNDEBUG",
+            "-g2",
+            "-O3"
+            ])
+        else:
+            cxx_flags.extend([
+            "-g3",
+            "-O0"
+            ])
         env = {
-            "CXXFLAGS": cxx_flags,
+            "CXXFLAGS": " ".join(cxx_flags),
             "PREFIX": self.package_folder
         }
         with tools.environment_append(env), tools.chdir("src"):
