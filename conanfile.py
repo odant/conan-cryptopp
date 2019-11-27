@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class CryptoppConan(ConanFile):
     name = "cryptopp"
-    version = "8.2.0+0"
+    version = "8.2.0+1"
     license = "Boost Software License 1.0 - https://raw.githubusercontent.com/weidai11/cryptopp/master/License.txt"
     description = "Crypto++: free C++ Class Library of Cryptographic Schemes"
     url = "https://github.com/odant/conan-cryptopp"
