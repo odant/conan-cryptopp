@@ -1,0 +1,15 @@
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -443,10 +443,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+ endif ()
+ 
+ # TODO: what about ICC and LLVM on Windows?
+-if (MSVC)
+-  if (CMAKE_SYSTEM_VERSION MATCHES "10\\.0.*")
+-    list(APPEND CRYPTOPP_COMPILE_DEFINITIONS "_WIN32_WINNT=0x0A00")
+-  endif ()
++if (WIN32)
++  list(APPEND CRYPTOPP_COMPILE_DEFINITIONS _WIN32_WINNT=0x0601 WINVER=0x0601 NTDDI_VERSION=0x06010000)
+   list(APPEND CRYPTOPP_COMPILE_OPTIONS "/FI\"winapifamily.h\"")
+ endif ()
+ 

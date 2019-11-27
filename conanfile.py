@@ -14,7 +14,7 @@ class CryptoppConan(ConanFile):
         "arch": ["x86_64", "x86", "mips", "armv7"]
     }
     generators = "cmake"
-    exports_sources = "src/*", "CMakeLists.txt", "FindCryptoPP.cmake"
+    exports_sources = "src/*", "CMakeLists.txt", "FindCryptoPP.cmake", "cmake.patch"
     no_copy_source = True
     build_policy = "missing"
 
@@ -26,6 +26,9 @@ class CryptoppConan(ConanFile):
         if self.settings.compiler.get_safe("libcxx") == "libstdc++":
             raise Exception("This package is only compatible with libstdc++11")
 
+    def source(self):
+        tools.patch(patch_file="cmake.patch")
+        
     def build(self):
         cmake = CMake(self)
         cmake.definitions["CMAKE_POSITION_INDEPENDENT_CODE:BOOL"] = "ON"
