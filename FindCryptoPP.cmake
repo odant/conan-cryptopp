@@ -11,7 +11,7 @@ find_library(CryptoPP_LIBRARY
 )
 
 if(CryptoPP_INCLUDE_DIR)
-    file(STRINGS ${CryptoPP_INCLUDE_DIR}/cryptopp/config.h _config_version REGEX "CRYPTOPP_VERSION")
+    file(STRINGS ${CryptoPP_INCLUDE_DIR}/cryptopp/config_ver.h _config_version REGEX "CRYPTOPP_VERSION")
     string(REGEX MATCH "([0-9])([0-9])([0-9])" _match_version ${_config_version})
     set(CryptoPP_VERSION_MAJOR ${CMAKE_MATCH_1})
     set(CryptoPP_VERSION_MINOR ${CMAKE_MATCH_2})
