@@ -1,17 +1,11 @@
 #!/usr/bin/env bash
 
-PWD_DIR=$(pwd)
-function cleanup {
-	cd "$PWD_DIR"
-}
-trap cleanup EXIT
-
-#############################################################################
-
 GREP=grep
 SED=sed
 AWK=awk
 MAKE=make
+
+#############################################################################
 
 # Fixup, Solaris and friends
 if [[ -d /usr/xpg4/bin ]]; then
@@ -31,7 +25,7 @@ if [[ "$IS_DARWIN" -ne 0 ]]; then
 fi
 
 # Fixup for Solaris and BSDs
-if [[ ! -z $(command -v gmake 2>/dev/null) ]]; then
+if [[ -n "$(command -v gmake 2>/dev/null)" ]]; then
 	MAKE=gmake
 else
 	MAKE=make
@@ -48,7 +42,16 @@ elif [[ ! -z $(command -v libtool 2>/dev/null) ]]; then
 	export LIBTOOLIZE=$(command -v libtool)
 fi
 
+# In case libtool is located in /opt, like under MacPorts or Compile Farm
+if [[ -z $(command -v glibtoolize 2>/dev/null) ]]; then
+	export LIBTOOLIZE=$(find /opt -name libtool 2>/dev/null | head -n 1)
+fi
+
 #############################################################################
+
+if [[ -z $(command -v aclocal 2>/dev/null) ]]; then
+	echo "Cannot find aclocal. Things may fail."
+fi
 
 if [[ -z $(command -v autoupdate 2>/dev/null) ]]; then
 	echo "Cannot find autoupdate. Things may fail."
@@ -85,6 +88,12 @@ done
 mkdir -p m4/
 
 #############################################################################
+
+echo "Running aclocal"
+if ! aclocal &>/dev/null; then
+	echo "aclocal failed."
+	exit 1
+fi
 
 echo "Running autoupdate"
 if ! autoupdate &>/dev/null; then
@@ -171,5 +180,16 @@ if ! ./cryptest tv all; then
 	exit 1
 fi
 
+#############################################################################
+
+echo ""
+echo "Building tarball"
+echo ""
+
+if ! make dist; then
+	echo "make dist failed."
+	exit 1
+fi
+
 # Return success
-[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 0 || return 0
+exit 0

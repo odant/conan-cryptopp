@@ -356,7 +356,7 @@ word64 XGetBV(word32 num)
 	return (static_cast<word64>(d) << 32) | a;
 
 // Remainder of GCC and compatibles.
-#elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__GNUC__) || defined(__clang__) || defined(__SUNPRO_CC)
 
 	// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=71659 and
 	// http://www.agner.org/optimize/vectorclass/read.php?i=65
@@ -680,7 +680,7 @@ bool CRYPTOPP_SECTION_INIT g_hasSM3 = false;
 bool CRYPTOPP_SECTION_INIT g_hasSM4 = false;
 word32 CRYPTOPP_SECTION_INIT g_cacheLineSize = CRYPTOPP_L1_CACHE_LINE_SIZE;
 
-// ARM does not have an unprivliged equivalent to CPUID on IA-32. We have to
+// ARM does not have an unprivileged equivalent to CPUID on IA-32. We have to
 // jump through some hoops to detect features on a wide array of platforms.
 // Our strategy is two part. First, attempt to *Query* the OS for a feature,
 // like using getauxval on Linux. If that fails, then *Probe* the cpu
@@ -1208,6 +1208,13 @@ inline bool CPU_QueryDARN()
 
 void DetectPowerpcFeatures()
 {
+	// GCC 10 is giving us trouble in CPU_ProbePower9() and
+	// CPU_ProbeDARN(). GCC is generating POWER9 instructions
+	// on POWER8 for ppc_power9.cpp. The compiler idiots did
+	// not think through the consequences of requiring us to
+	// use -mcpu=power9 to unlock the ISA. Epic fail.
+	// https://github.com/weidai11/cryptopp/issues/986
+
 	// The CPU_ProbeXXX's return false for OSes which
 	// can't tolerate SIGILL-based probes, like Apple
 	g_hasAltivec  = CPU_QueryAltivec() || CPU_ProbeAltivec();

@@ -4,12 +4,20 @@
 
 /// \file config_asm.h
 /// \brief Library configuration file
+/// \details <tt>config_asm.h</tt> provides defines for instruction set
+///  architectures
+///  and inline assembly.
 /// \details <tt>config.h</tt> was split into components in May 2019 to better
 ///  integrate with Autoconf and its feature tests. The splitting occurred so
 ///  users could continue to include <tt>config.h</tt> while allowing Autoconf
 ///  to write new <tt>config_asm.h</tt> and new <tt>config_cxx.h</tt> using
 ///  its feature tests.
-/// \sa <A HREF="https://github.com/weidai11/cryptopp/issues/835">Issue 835</A>
+/// \note You should include <tt>config.h</tt> rather than <tt>config_asm.h</tt>
+///  directly.
+/// \sa <A HREF="https://github.com/weidai11/cryptopp/issues/835">Issue 835,
+///  Make config.h more autoconf friendly</A>,
+///  <A HREF="https://www.cryptopp.com/wiki/Configure.sh">Configure.sh script</A>
+///  on the Crypto++ wiki
 /// \since Crypto++ 8.3
 
 #ifndef CRYPTOPP_CONFIG_ASM_H
@@ -39,7 +47,7 @@
 // Also see https://bugs.llvm.org/show_bug.cgi?id=39895 .
 // #define CRYPTOPP_DISABLE_MIXED_ASM 1
 
-#if defined(__clang__)
+#if defined(__clang__) || (defined(__APPLE__) && defined(__GNUC__)) || defined(__SUNPRO_CC)
 # undef CRYPTOPP_DISABLE_MIXED_ASM
 # define CRYPTOPP_DISABLE_MIXED_ASM 1
 #endif
@@ -189,6 +197,7 @@
 #endif
 
 // Fixup Android and SSE, Crypto. It may be enabled based on compiler version.
+// Also see https://developer.android.com/ndk/guides/abis
 #if defined(__ANDROID__) || defined(ANDROID)
 # if (CRYPTOPP_BOOL_X86)
 #  undef CRYPTOPP_SSE41_AVAILABLE
@@ -364,7 +373,7 @@
 #endif
 
 // Disable for Android. Android only offers the base Aarch64 architecture.
-// https://developer.android.com/ndk/guides/abis
+// Also see https://developer.android.com/ndk/guides/abis
 #if defined(__ANDROID__) || defined(ANDROID)
 # undef CRYPTOPP_ARM_CRC32_AVAILABLE
 # undef CRYPTOPP_ARM_PMULL_AVAILABLE

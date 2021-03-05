@@ -126,14 +126,14 @@ protected:
 	}
 };
 
-#define CRYPTOPP_INHERIT_ALLOCATOR_TYPES	\
-typedef typename AllocatorBase<T>::value_type value_type;\
-typedef typename AllocatorBase<T>::size_type size_type;\
-typedef typename AllocatorBase<T>::difference_type difference_type;\
-typedef typename AllocatorBase<T>::pointer pointer;\
-typedef typename AllocatorBase<T>::const_pointer const_pointer;\
-typedef typename AllocatorBase<T>::reference reference;\
-typedef typename AllocatorBase<T>::const_reference const_reference;
+#define CRYPTOPP_INHERIT_ALLOCATOR_TYPES(T_type)	\
+	typedef typename AllocatorBase<T_type>::value_type value_type;\
+	typedef typename AllocatorBase<T_type>::size_type size_type;\
+	typedef typename AllocatorBase<T_type>::difference_type difference_type;\
+	typedef typename AllocatorBase<T_type>::pointer pointer;\
+	typedef typename AllocatorBase<T_type>::const_pointer const_pointer;\
+	typedef typename AllocatorBase<T_type>::reference reference;\
+	typedef typename AllocatorBase<T_type>::const_reference const_reference;
 
 /// \brief Reallocation function
 /// \tparam T the class or type
@@ -155,16 +155,16 @@ typename A::pointer StandardReallocate(A& alloc, T *oldPtr, typename A::size_typ
 
 	if (preserve)
 	{
-		typename A::pointer newPointer = alloc.allocate(newSize, NULLPTR);
+		typename A::pointer newPtr = alloc.allocate(newSize, NULLPTR);
 		const typename A::size_type copySize = STDMIN(oldSize, newSize) * sizeof(T);
 
-		if (oldPtr && newPointer)
-			memcpy_s(newPointer, copySize, oldPtr, copySize);
+		if (oldPtr && newPtr)
+			memcpy_s(newPtr, copySize, oldPtr, copySize);
 
 		if (oldPtr)
 			alloc.deallocate(oldPtr, oldSize);
 
-		return newPointer;
+		return newPtr;
 	}
 	else
 	{
@@ -187,7 +187,7 @@ template <class T, bool T_Align16 = false>
 class AllocatorWithCleanup : public AllocatorBase<T>
 {
 public:
-	CRYPTOPP_INHERIT_ALLOCATOR_TYPES
+	CRYPTOPP_INHERIT_ALLOCATOR_TYPES(T)
 
 	/// \brief Allocates a block of memory
 	/// \param ptr the size of the allocation
@@ -299,7 +299,7 @@ class NullAllocator : public AllocatorBase<T>
 {
 public:
 	//LCOV_EXCL_START
-	CRYPTOPP_INHERIT_ALLOCATOR_TYPES
+	CRYPTOPP_INHERIT_ALLOCATOR_TYPES(T)
 
 	// TODO: should this return NULL or throw bad_alloc? Non-Windows C++ standard
 	// libraries always throw. And late mode Windows throws. Early model Windows
@@ -336,10 +336,8 @@ template <class T, size_t S, class A = NullAllocator<T>, bool T_Align16 = false>
 class FixedSizeAllocatorWithCleanup : public AllocatorBase<T>
 {
 	// The body of FixedSizeAllocatorWithCleanup is provided in the two
-	// partial specializations that follow. The two specialiations
-	// pivot on the boolean template parameter T_Align16. AIX, Solaris,
-	// IBM XLC and SunCC receive a little extra help. We managed to
-	// clear most of the warnings.
+	// partial specializations that follow. The two specializations
+	// pivot on the boolean template parameter T_Align16.
 };
 
 /// \brief Static secure memory block with cleanup
@@ -356,7 +354,7 @@ template <class T, size_t S, class A>
 class FixedSizeAllocatorWithCleanup<T, S, A, true> : public AllocatorBase<T>
 {
 public:
-	CRYPTOPP_INHERIT_ALLOCATOR_TYPES
+	CRYPTOPP_INHERIT_ALLOCATOR_TYPES(T)
 
 	/// \brief Constructs a FixedSizeAllocatorWithCleanup
 	FixedSizeAllocatorWithCleanup() : m_allocated(false) {}
@@ -401,6 +399,8 @@ public:
 	/// \sa reallocate(), SecBlockWithHint
 	pointer allocate(size_type size, const void *hint)
 	{
+		CRYPTOPP_ASSERT(IsAlignedOn(m_array, 8));
+
 		if (size <= S && !m_allocated)
 		{
 			m_allocated = true;
@@ -427,7 +427,7 @@ public:
 			// If the m_allocated assert fires then the bit twiddling for
 			// GetAlignedArray() is probably incorrect for the platform.
 			// Be sure to check CRYPTOPP_ALIGN_DATA(8). The platform may
-			// not have a way to declaritively align data to 8.
+			// not have a way to declaratively align data to 8.
 			CRYPTOPP_ASSERT(size <= S);
 			CRYPTOPP_ASSERT(m_allocated);
 			m_allocated = false;
@@ -468,15 +468,15 @@ public:
 			return oldPtr;
 		}
 
-		pointer newPointer = allocate(newSize, NULLPTR);
+		pointer newPtr = allocate(newSize, NULLPTR);
 		if (preserve && newSize)
 		{
 			const size_type copySize = STDMIN(oldSize, newSize);
-			if (newPointer && oldPtr)  // GCC analyzer warning
-				memcpy_s(newPointer, sizeof(T)*newSize, oldPtr, sizeof(T)*copySize);
+			if (newPtr && oldPtr)  // GCC analyzer warning
+				memcpy_s(newPtr, sizeof(T)*newSize, oldPtr, sizeof(T)*copySize);
 		}
 		deallocate(oldPtr, oldSize);
-		return newPointer;
+		return newPtr;
 	}
 
 	CRYPTOPP_CONSTEXPR size_type max_size() const
@@ -486,60 +486,77 @@ public:
 
 private:
 
-#if CRYPTOPP_BOOL_ALIGN16 && (defined(_M_X64) || defined(__x86_64__))
-	// Before we can add additional platforms we need to check the
-	// linker documentation for alignment behavior for stack variables.
-	// CRYPTOPP_ALIGN_DATA(16) is known OK on Linux, OS X, Solaris.
-	// Also see http://stackoverflow.com/a/1468656/608639.
-	T* GetAlignedArray() {
-		CRYPTOPP_ASSERT(IsAlignedOn(m_array, 16));
-		return m_array;
-	}
-	CRYPTOPP_ALIGN_DATA(16) T m_array[S];
-
-#elif CRYPTOPP_BOOL_ALIGN16
+#if CRYPTOPP_BOOL_ALIGN16
 
 	// There be demons here... We cannot use CRYPTOPP_ALIGN_DATA(16)
-	// because linkers on 32-bit machines (and some 64-bit machines)
-	// align the stack to 8-bytes or less by default, not 16-bytes as
-	// requested. Additionally, the AIX linker seems to use 4-bytes
-	// by default. However, all linkers tested appear to honor
-	// CRYPTOPP_ALIGN_DATA(8). Also see
-	// http://stackoverflow.com/a/1468656/608639.
+	// because linkers on 32-bit machines and some 64-bit machines
+	// align the stack to 8-bytes or less, and not 16-bytes as
+	// requested. We can only count on a smaller alignment. All
+	// toolchains tested appear to honor CRYPTOPP_ALIGN_DATA(8). Also
+	// see http://stackoverflow.com/a/1468656/608639.
 	//
 	// The 16-byte alignment is achieved by padding the requested
-	// size with extra elements so we have at least 16-bytes of slack
-	// to work with. Then the pointer is moved down to achieve a
-	// 16-byte alignment (stacks grow down).
+	// size with extra elements so we have at least 8-bytes of slack
+	// to work with. Then the array pointer is moved to achieve a
+	// 16-byte alignment.
 	//
-	// The additional 16-bytes introduces a small secondary issue.
+	// The additional 8-bytes introduces a small secondary issue.
 	// The secondary issue is, a large T results in 0 = 8/sizeof(T).
 	// The library is OK but users may hit it. So we need to guard
-	// for a large T, and that is what PAD achieves.
+	// for a large T, and that is what the enum and PAD achieves.
 	T* GetAlignedArray() {
-		T* p_array = reinterpret_cast<T*>(static_cast<void*>((reinterpret_cast<byte*>(m_array)) + (0-reinterpret_cast<size_t>(m_array))%16));
-		// Verify the 16-byte alignment
-		CRYPTOPP_ASSERT(IsAlignedOn(p_array, 16));
-		// Verify allocated array with pad is large enough.
-		CRYPTOPP_ASSERT(p_array+S <= m_array+(S+PAD));
-		return p_array;
+
+		// m_array is aligned on 8 byte boundaries due to
+		// CRYPTOPP_ALIGN_DATA(8). If m_array%16 is 0, then the buffer
+		// is 16-byte aligned and nothing needs to be done. if
+		// m_array%16 is 8, then the buffer is not 16-byte aligned and
+		// we need to add 8. 8 has that nice symmetric property.
+		//
+		// If we needed to use CRYPTOPP_ALIGN_DATA(4) due to toolchain
+		// limitations, then the calculation would be slightly more
+		// costly: ptr = m_array + (16 - (m_array % 16)) % 16;
+		CRYPTOPP_ASSERT(IsAlignedOn(m_array, 8));
+		int off = reinterpret_cast<uintptr_t>(m_array) % 16;
+		byte* ptr = reinterpret_cast<byte*>(m_array) + off;
+
+		// Verify the 16-byte alignment. This is the point
+		// of these extra gyrations.
+		CRYPTOPP_ASSERT(IsAlignedOn(ptr, 16));
+		// Verify the lower bound. This is Issue 982/988.
+		CRYPTOPP_ASSERT(
+			reinterpret_cast<uintptr_t>(ptr) >=
+			  reinterpret_cast<uintptr_t>(m_array)
+		);
+		// Verify the upper bound. Allocated array with
+		// pad is large enough.
+		CRYPTOPP_ASSERT(
+			reinterpret_cast<uintptr_t>(ptr+S*sizeof(T)) <=
+			  reinterpret_cast<uintptr_t>(m_array+(S+PAD))
+		);
+
+		// void* to silence Clang warnings
+		return reinterpret_cast<T*>(
+		  static_cast<void*>(ptr)
+		);
 	}
 
-#   if defined(_AIX)
-	// PAD is elements, not bytes, and rounded up to ensure no overflow.
-	enum { Q = sizeof(T), PAD = (Q >= 16) ? 1 : (Q >= 8) ? 2 : (Q >= 4) ? 4 : (Q >= 2) ? 8 : 16 };
-	CRYPTOPP_ALIGN_DATA(8) T m_array[S+PAD];
-#   else
 	// PAD is elements, not bytes, and rounded up to ensure no overflow.
 	enum { Q = sizeof(T), PAD = (Q >= 8) ? 1 : (Q >= 4) ? 2 : (Q >= 2) ? 4 : 8 };
+	// enum { Q = sizeof(T), PAD = (Q >= 16) ? 1 : (Q >= 8) ? 2 : (Q >= 4) ? 4 : (Q >= 2) ? 8 : 16 };
 	CRYPTOPP_ALIGN_DATA(8) T m_array[S+PAD];
-#   endif
 
 #else
 
-	// CRYPTOPP_BOOL_ALIGN16 is 0. Use natural alignment of T.
+	// CRYPTOPP_BOOL_ALIGN16 is 0. If we are here then the user
+	// probably compiled with CRYPTOPP_DISABLE_ASM. Normally we
+	// would use the natural alignment of T. The problem we are
+	// having is, some toolchains are changing the boundary for
+	// 64-bit arrays. 64-bit elements require 8-byte alignment,
+	// but the toolchain is laying the array out on a 4 byte
+	// boundary. See GH #992 for mystery alignment,
+	// https://github.com/weidai11/cryptopp/issues/992
 	T* GetAlignedArray() {return m_array;}
-	T m_array[S];
+	CRYPTOPP_ALIGN_DATA(8) T m_array[S];
 
 #endif
 
@@ -561,7 +578,7 @@ template <class T, size_t S, class A>
 class FixedSizeAllocatorWithCleanup<T, S, A, false> : public AllocatorBase<T>
 {
 public:
-	CRYPTOPP_INHERIT_ALLOCATOR_TYPES
+	CRYPTOPP_INHERIT_ALLOCATOR_TYPES(T)
 
 	/// \brief Constructs a FixedSizeAllocatorWithCleanup
 	FixedSizeAllocatorWithCleanup() : m_allocated(false) {}
@@ -672,15 +689,15 @@ public:
 			return oldPtr;
 		}
 
-		pointer newPointer = allocate(newSize, NULLPTR);
+		pointer newPtr = allocate(newSize, NULLPTR);
 		if (preserve && newSize)
 		{
 			const size_type copySize = STDMIN(oldSize, newSize);
-			if (newPointer && oldPtr)  // GCC analyzer warning
-				memcpy_s(newPointer, sizeof(T)*newSize, oldPtr, sizeof(T)*copySize);
+			if (newPtr && oldPtr)  // GCC analyzer warning
+				memcpy_s(newPtr, sizeof(T)*newSize, oldPtr, sizeof(T)*copySize);
 		}
 		deallocate(oldPtr, oldSize);
-		return newPointer;
+		return newPtr;
 	}
 
 	CRYPTOPP_CONSTEXPR size_type max_size() const
@@ -690,11 +707,12 @@ public:
 
 private:
 
-	// The 8-byte alignments follows convention of Linux and Windows.
-	// Linux and Windows receives most testing. Duplicate it here for
-	// other platforms like AIX and Solaris. AIX and Solaris often use
-	// alignments smaller than expected. In fact AIX caught us by
-	// surprise with word16 and word32.
+	// T_Align16 is false. Normally we would use the natural
+	// alignment of T. The problem we are having is, some toolchains
+	// are changing the boundary for 64-bit arrays. 64-bit elements
+	// require 8-byte alignment, but the toolchain is laying the array
+	// out on a 4 byte boundary. See GH #992 for mystery alignment,
+	// https://github.com/weidai11/cryptopp/issues/992
 	T* GetAlignedArray() {return m_array;}
 	CRYPTOPP_ALIGN_DATA(8) T m_array[S];
 

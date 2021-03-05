@@ -623,30 +623,42 @@ endif
 #####                     PowerPC                     #####
 ###########################################################
 
-# PowerPC and PowerPC-64. Altivec is available with POWER4 with GCC and
+# PowerPC and PowerPC64. Altivec is available with POWER4 with GCC and
 # POWER6 with XLC. The tests below are crafted for IBM XLC and the LLVM
 # front-end. XLC/LLVM only supplies POWER8 so we have to set the flags for
 # XLC/LLVM to POWER8. I've got a feeling LLVM is going to cause trouble.
+
 ifneq ($(IS_PPC32)$(IS_PPC64),00)
 ifeq ($(DETECT_FEATURES),1)
 
+  # IBM XL C/C++ has the -qaltivec flag really screwed up. We can't seem
+  # to get it enabled without an -qarch= option. And -qarch= produces an
+  # error on later versions of the compiler. The only thing that seems
+  # to work consistently is -qarch=auto. -qarch=auto is equivalent to
+  # GCC's -march=native, which we don't really want.
+
   # XLC requires -qaltivec in addition to Arch or CPU option
   ifeq ($(XLC_COMPILER),1)
-    POWER9_FLAG = -qarch=pwr9 -qaltivec
+    # POWER9_FLAG = -qarch=pwr9 -qaltivec
     POWER8_FLAG = -qarch=pwr8 -qaltivec
     POWER7_VSX_FLAG = -qarch=pwr7 -qvsx -qaltivec
     POWER7_PWR_FLAG = -qarch=pwr7 -qaltivec
-    POWER6_FLAG = -qarch=pwr6 -qaltivec
-    POWER5_FLAG = -qarch=pwr5 -qaltivec
-    POWER4_FLAG = -qarch=pwr4 -qaltivec
-    ALTIVEC_FLAG = -qaltivec
+    ALTIVEC_FLAG = -qarch=auto -qaltivec
   else
-    POWER9_FLAG = -mcpu=power9
+    # POWER9_FLAG = -mcpu=power9
     POWER8_FLAG = -mcpu=power8
     POWER7_VSX_FLAG = -mcpu=power7 -mvsx
     POWER7_PWR_FLAG = -mcpu=power7
     ALTIVEC_FLAG = -maltivec
   endif
+
+  # GCC 10 is giving us trouble in CPU_ProbePower9() and
+  # CPU_ProbeDARN(). GCC is generating POWER9 instructions
+  # on POWER8 for ppc_power9.cpp. The compiler folks did
+  # not think through the consequences of requiring us to
+  # use -mcpu=power9 to unlock the ISA. Epic fail.
+  # https:#github.com/weidai11/cryptopp/issues/986
+  POWER9_FLAG =
 
   # XLC with LLVM front-ends failed to define XLC defines.
   #ifeq ($(findstring -qxlcompatmacros,$(CXXFLAGS)),)
@@ -661,14 +673,14 @@ ifeq ($(DETECT_FEATURES),1)
   #####################################################################
   # Looking for a POWER9 option
 
-  TPROG = TestPrograms/test_ppc_power9.cxx
-  TOPT = $(POWER9_FLAG)
-  HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  ifeq ($(strip $(HAVE_OPT)),0)
-    # DARN_FLAG = $(POWER9_FLAG)
-  else
-    POWER9_FLAG =
-  endif
+  #TPROG = TestPrograms/test_ppc_power9.cxx
+  #TOPT = $(POWER9_FLAG)
+  #HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
+  #ifeq ($(strip $(HAVE_OPT)),0)
+  #  DARN_FLAG = $(POWER9_FLAG)
+  #else
+  #  POWER9_FLAG =
+  #endif
 
   #####################################################################
   # Looking for a POWER8 option
@@ -717,34 +729,10 @@ ifeq ($(DETECT_FEATURES),1)
   TPROG = TestPrograms/test_ppc_altivec.cxx
   TOPT = $(ALTIVEC_FLAG)
   HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-  ifneq ($(strip $(HAVE_OPT)),0)
+  ifeq ($(strip $(HAVE_OPT)),0)
+    ALTIVEC_FLAG := $(ALTIVEC_FLAG)
+  else
     ALTIVEC_FLAG =
-  endif
-
-  # XLC fixup
-  ifeq ($(XLC_COMPILER)$(ALTIVEC_FLAG),1)
-    TPROG = TestPrograms/test_ppc_altivec.cxx
-    TOPT = $(POWER4_FLAG)
-    HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-    ifeq ($(strip $(HAVE_OPT)),0)
-      ALTIVEC_FLAG = $(POWER4_FLAG)
-    else
-      TPROG = TestPrograms/test_ppc_altivec.cxx
-      TOPT = $(POWER5_FLAG)
-      HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-      ifeq ($(strip $(HAVE_OPT)),0)
-        ALTIVEC_FLAG = $(POWER5_FLAG)
-      else
-        TPROG = TestPrograms/test_ppc_altivec.cxx
-        TOPT = $(POWER6_FLAG)
-        HAVE_OPT = $(shell $(CXX) $(TCXXFLAGS) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT) 2>&1 | wc -w)
-        ifeq ($(strip $(HAVE_OPT)),0)
-          ALTIVEC_FLAG = $(POWER6_FLAG)
-        else
-          ALTIVEC_FLAG =
-        endif
-      endif
-    endif
   endif
 
   ifneq ($(ALTIVEC_FLAG),)
@@ -773,8 +761,8 @@ ifeq ($(DETECT_FEATURES),1)
     CRYPTOPP_CXXFLAGS += -DCRYPTOPP_DISABLE_POWER7
   else ifeq ($(POWER8_FLAG),)
     CRYPTOPP_CXXFLAGS += -DCRYPTOPP_DISABLE_POWER8
-  else ifeq ($(POWER9_FLAG),)
-    CRYPTOPP_CXXFLAGS += -DCRYPTOPP_DISABLE_POWER9
+  #else ifeq ($(POWER9_FLAG),)
+  #  CRYPTOPP_CXXFLAGS += -DCRYPTOPP_DISABLE_POWER9
   endif
 
 # DETECT_FEATURES
@@ -1180,6 +1168,11 @@ LIBIMPORTOBJS := $(LIBOBJS:.o=.import.o)
 TESTIMPORTOBJS := $(TESTOBJS:.o=.import.o)
 DLLTESTOBJS := dlltest.dllonly.o
 
+# Clean recipe, Issue 998. Don't filter-out some artifacts from the list of objects
+# The *.S is a hack. It makes the ASM appear like C++ so the object files make the CLEAN_OBJS list 
+CLEAN_SRCS := $(wildcard *.cpp) $(patsubst %.S,%.cpp,$(wildcard *.S))
+CLEAN_OBJS := $(CLEAN_SRCS:.cpp=.o) $(CLEAN_SRCS:.cpp=.import.o) $(CLEAN_SRCS:.cpp=.export.o)
+
 ###########################################################
 #####           Add our flags to user flags           #####
 ###########################################################
@@ -1289,7 +1282,7 @@ docs html:
 
 .PHONY: clean
 clean:
-	-$(RM) adhoc.cpp.o adhoc.cpp.proto.o $(LIBOBJS) rdrand-*.o $(TESTOBJS) $(DLLOBJS) $(LIBIMPORTOBJS) $(TESTIMPORTOBJS) $(DLLTESTOBJS)
+	-$(RM) adhoc.cpp.o adhoc.cpp.proto.o $(CLEAN_OBJS) rdrand-*.o
 	@-$(RM) libcryptopp.a libcryptopp.dylib cryptopp.dll libcryptopp.dll.a libcryptopp.import.a
 	@-$(RM) libcryptopp.so libcryptopp.so$(SOLIB_COMPAT_SUFFIX) libcryptopp.so$(SOLIB_VERSION_SUFFIX)
 	@-$(RM) cryptest.exe dlltest.exe cryptest.import.exe cryptest.info ct et
@@ -1454,7 +1447,7 @@ libcryptopp.pc:
 	@echo '' >> libcryptopp.pc
 	@echo 'Name: Crypto++' >> libcryptopp.pc
 	@echo 'Description: Crypto++ cryptographic library' >> libcryptopp.pc
-	@echo 'Version: 8.3' >> libcryptopp.pc
+	@echo 'Version: 8.4' >> libcryptopp.pc
 	@echo 'URL: https://cryptopp.com/' >> libcryptopp.pc
 	@echo '' >> libcryptopp.pc
 	@echo 'Cflags: -I$${includedir}' >> libcryptopp.pc
@@ -1655,11 +1648,11 @@ sm4_simd.o : sm4_simd.cpp
 # IBM XLC -O3 optimization bug
 ifeq ($(XLC_COMPILER),1)
 sm3.o : sm3.cpp
-	$(CXX) $(strip $(subst -O3,-O2,$(CXXFLAGS)) -c) $<
+	$(CXX) $(strip $(CPPFLAGS) $(subst -O3,-O2,$(CXXFLAGS)) -c) $<
 donna_32.o : donna_32.cpp
-	$(CXX) $(strip $(subst -O3,-O2,$(CXXFLAGS)) -c) $<
+	$(CXX) $(strip $(CPPFLAGS) $(subst -O3,-O2,$(CXXFLAGS)) -c) $<
 donna_64.o : donna_64.cpp
-	$(CXX) $(strip $(subst -O3,-O2,$(CXXFLAGS)) -c) $<
+	$(CXX) $(strip $(CPPFLAGS) $(subst -O3,-O2,$(CXXFLAGS)) -c) $<
 endif
 
 # SSE2 on i686
