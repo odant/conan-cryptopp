@@ -1,0 +1,138 @@
+diff --git a/src/iterhash.h b/src/iterhash.h
+index 5a65b5b..49d3258 100644
+--- a/src/iterhash.h
++++ b/src/iterhash.h
+@@ -191,7 +191,8 @@ public:
+ 	unsigned int DigestSize() const {return DIGESTSIZE;}
+ 
+ protected:
+-	IteratedHashWithStaticTransform() {this->Init();}
++	// https://github.com/weidai11/cryptopp/issues/147#issuecomment-766231864
++	IteratedHashWithStaticTransform() {IteratedHashWithStaticTransform::Init();}
+ 	void HashEndianCorrectedBlock(const T_HashWordType *data) {T_Transform::Transform(this->m_state, data);}
+ 	void Init() {T_Transform::InitState(this->m_state);}
+ 
+diff --git a/src/config_os.h b/src/config_os.h
+index da27de2..5b3a268 100644
+--- a/src/config_os.h
++++ b/src/config_os.h
+@@ -24,15 +24,6 @@
+ 
+ #include "config_ver.h"
+ 
+-// It is OK to remove the hard stop below, but you are on your own.
+-// After building the library be sure to run self tests described
+-// https://www.cryptopp.com/wiki/Release_Process#Self_Tests
+-// Some relevant bug reports can be found at:
+-// * Clang: http://github.com/weidai11/cryptopp/issues/147
+-#if (defined(_MSC_VER) && defined(__clang__) && !(defined( __clang_analyzer__)))
+-# error: "Unsupported configuration"
+-#endif
+-
+ // Windows platform
+ #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
+ #define CRYPTOPP_WIN32_AVAILABLE
+diff --git a/src/rijndael.cpp b/src/rijndael.cpp
+index 65f6d9e..72c68a6 100644
+--- a/src/rijndael.cpp
++++ b/src/rijndael.cpp
+@@ -110,7 +110,7 @@ NAMESPACE_BEGIN(CryptoPP)
+ #define CONST_M128I_CAST(x) ((const __m128i *)(const void *)(x))
+ 
+ #if defined(CRYPTOPP_ALLOW_RIJNDAEL_UNALIGNED_DATA_ACCESS)
+-# if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE)) && !defined(CRYPTOPP_DISABLE_RIJNDAEL_ASM)
++# if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE))
+ namespace rdtable {CRYPTOPP_ALIGN_DATA(16) word64 Te[256+2];}
+ using namespace rdtable;
+ # else
+@@ -286,7 +286,7 @@ void Rijndael::Base::FillEncTable()
+ 		}
+ #endif
+ 	}
+-#if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE)) && !defined(CRYPTOPP_DISABLE_RIJNDAEL_ASM)
++#if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE))
+ 	Te[256] = Te[257] = 0;
+ #endif
+ 	s_TeFilled = true;
+@@ -375,7 +375,7 @@ std::string Rijndael::Base::AlgorithmProvider() const
+ 	if (HasAESNI())
+ 		return "AESNI";
+ #endif
+-#if CRYPTOPP_SSE2_ASM_AVAILABLE && !defined(CRYPTOPP_DISABLE_RIJNDAEL_ASM)
++#if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE))
+ 	if (HasSSE2())
+ 		return "SSE2";
+ #endif
+@@ -531,12 +531,16 @@ void Rijndael::Base::UncheckedSetKey(const byte *userKey, unsigned int keyLen, c
+ 
+ void Rijndael::Enc::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const
+ {
+-#if CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE) || CRYPTOPP_AESNI_AVAILABLE
+-# if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE)) && !defined(CRYPTOPP_DISABLE_RIJNDAEL_ASM)
+-	if (HasSSE2())
+-# else
++#if CRYPTOPP_AESNI_AVAILABLE
+ 	if (HasAESNI())
+-# endif
++	{
++		(void)Rijndael::Enc::AdvancedProcessBlocks(inBlock, xorBlock, outBlock, 16, 0);
++		return;
++	}
++#endif
++
++#if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE))
++	if (HasSSE2())
+ 	{
+ 		(void)Rijndael::Enc::AdvancedProcessBlocks(inBlock, xorBlock, outBlock, 16, 0);
+ 		return;
+@@ -1256,7 +1260,7 @@ size_t Rijndael::Enc::AdvancedProcessBlocks(const byte *inBlocks, const byte *xo
+ 		return Rijndael_Enc_AdvancedProcessBlocks128_6x1_ALTIVEC(m_key, m_rounds, inBlocks, xorBlocks, outBlocks, length, flags);
+ #endif
+ 
+-#if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE)) && !defined(CRYPTOPP_DISABLE_RIJNDAEL_ASM)
++#if (CRYPTOPP_SSE2_ASM_AVAILABLE || defined(CRYPTOPP_X64_MASM_AVAILABLE))
+ 	if (HasSSE2())
+ 	{
+ 		if (length < BLOCKSIZE)
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index edb01fe..38bc999 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -70,8 +70,8 @@ set(TEST_CXX_FILE ${TEST_PROG_DIR}/test_cxx.cxx)
+ #============================================================================
+ 
+ option(BUILD_STATIC "Build static library" ON)
+-option(BUILD_SHARED "Build shared library" ON)
+-option(BUILD_TESTING "Build library tests" ON)
++option(BUILD_SHARED "Build shared library" OFF)
++option(BUILD_TESTING "Build library tests" OFF)
+ option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)
+ option(USE_INTERMEDIATE_OBJECTS_TARGET "Use a common intermediate objects target for the static and shared library targets" ON)
+ 
+@@ -181,7 +181,7 @@ endif ()
+ 
+ function(CheckCompileOption opt var)
+ 
+-  if (MSVC)
++  if (MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+ 
+     # TODO: improve this...
+     CHECK_CXX_COMPILER_FLAG(${opt} ${var})
+@@ -235,7 +235,7 @@ endfunction(CheckCompileOption)
+ 
+ function(CheckCompileLinkOption opt var prog)
+ 
+-  if (MSVC)
++  if (MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+ 
+     # TODO: improve this...
+     CHECK_CXX_COMPILER_FLAG(${opt} ${var})
+@@ -280,7 +280,7 @@ endfunction(AddCompileOption)
+ 
+ function(DumpMachine output pattern)
+ 
+-  if (MSVC)
++  if (MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+ 
+     # CMake does not provide a generic shell/terminal mechanism
+     #  and Microsoft environments don't know what 'sh' is.
