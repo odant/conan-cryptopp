@@ -1,31 +1,18 @@
-diff --git a/src/iterhash.h b/src/iterhash.h
-index 5a65b5b..49d3258 100644
---- a/src/iterhash.h
-+++ b/src/iterhash.h
-@@ -191,7 +191,8 @@ public:
- 	unsigned int DigestSize() const {return DIGESTSIZE;}
- 
- protected:
--	IteratedHashWithStaticTransform() {this->Init();}
-+	// https://github.com/weidai11/cryptopp/issues/147#issuecomment-766231864
-+	IteratedHashWithStaticTransform() {IteratedHashWithStaticTransform::Init();}
- 	void HashEndianCorrectedBlock(const T_HashWordType *data) {T_Transform::Transform(this->m_state, data);}
- 	void Init() {T_Transform::InitState(this->m_state);}
- 
 diff --git a/src/config_os.h b/src/config_os.h
 index da27de2..5b3a268 100644
 --- a/src/config_os.h
 +++ b/src/config_os.h
-@@ -24,15 +24,6 @@
- 
+@@ -24,16 +24,6 @@
+
  #include "config_ver.h"
- 
+
 -// It is OK to remove the hard stop below, but you are on your own.
 -// After building the library be sure to run self tests described
 -// https://www.cryptopp.com/wiki/Release_Process#Self_Tests
--// Some relevant bug reports can be found at:
--// * Clang: http://github.com/weidai11/cryptopp/issues/147
--#if (defined(_MSC_VER) && defined(__clang__) && !(defined( __clang_analyzer__)))
+-// The problems with Clang pretending to be other compilers is
+-// discussed at http://github.com/weidai11/cryptopp/issues/147.
+-#if (defined(_MSC_VER) && defined(__clang__) && \
+-   !(defined( __clang_analyzer__)) && !defined(__INTEL_LLVM_COMPILER))
 -# error: "Unsupported configuration"
 -#endif
 -
@@ -98,7 +85,7 @@ diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
 index edb01fe..38bc999 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -70,8 +70,8 @@ set(TEST_CXX_FILE ${TEST_PROG_DIR}/test_cxx.cxx)
+@@ -72,8 +72,8 @@ set(TEST_CXX_FILE ${TEST_PROG_DIR}/test_cxx.cxx)
  #============================================================================
  
  option(BUILD_STATIC "Build static library" ON)
@@ -109,7 +96,7 @@ index edb01fe..38bc999 100644
  option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)
  option(USE_INTERMEDIATE_OBJECTS_TARGET "Use a common intermediate objects target for the static and shared library targets" ON)
  
-@@ -181,7 +181,7 @@ endif ()
+@@ -222,7 +222,7 @@ endif ()
  
  function(CheckCompileOption opt var)
  
@@ -118,7 +105,7 @@ index edb01fe..38bc999 100644
  
      # TODO: improve this...
      CHECK_CXX_COMPILER_FLAG(${opt} ${var})
-@@ -235,7 +235,7 @@ endfunction(CheckCompileOption)
+@@ -276,7 +276,7 @@ endfunction(CheckCompileOption)
  
  function(CheckCompileLinkOption opt var prog)
  
@@ -127,7 +114,7 @@ index edb01fe..38bc999 100644
  
      # TODO: improve this...
      CHECK_CXX_COMPILER_FLAG(${opt} ${var})
-@@ -280,7 +280,7 @@ endfunction(AddCompileOption)
+@@ -321,7 +321,7 @@ endfunction(AddCompileOption)
  
  function(DumpMachine output pattern)
  

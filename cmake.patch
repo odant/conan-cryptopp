@@ -1,6 +1,6 @@
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -388,10 +388,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+@@ -429,10 +429,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
  ###############################################################################
 
  # TODO: what about ICC and LLVM on Windows?
