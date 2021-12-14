@@ -1,30 +1,27 @@
 #!/usr/bin/env bash
 
-# cryptest.sh - written and placed in public domain by Jeffrey Walton and Uri
-#               Blumenthal.
-
+#############################################################################
+#
 # This is a test script that can be used on some Linux/Unix/Apple machines to
 # automate testing of the shared object to ensure linking and symbols don't go
 # missing from release to release.
+#
+# Written and placed in public domain by Jeffrey Walton and Uri Blumenthal.
+#
+# Crypto++ Library is copyrighted as a compilation and (as of version 5.6.2)
+# licensed under the Boost Software License 1.0, while the individual files
+# in the compilation are all public domain.
+#
+#############################################################################
 
-############################################
-# Cleanup
-
-PWD_DIR=$(pwd)
-function cleanup {
-    rm -f adhoc.cpp *\.a *\.o *\.so* *\.dylib*
-    cd "$PWD_DIR"
-}
-trap cleanup EXIT
-
-############################################
+#############################################################################
 # Tags to test
 
 OLD_VERSION_TAG=CRYPTOPP_8_3_0
 NEW_VERSION_TAG=master
 
-############################################
-# If local repo is dirty, then promt first
+#############################################################################
+# If local repo is dirty, then prompt first
 
 DIRTY=$(git diff --shortstat 2> /dev/null | tail -1)
 if [[ ! -z "$DIRTY" ]]; then
@@ -41,14 +38,14 @@ else
 	echo "The local repo is clean. Proceeding..."
 fi
 
-############################################
+#############################################################################
 
 echo
 echo "****************************************************************"
 echo "Testing '$NEW_VERSION_TAG' against '$OLD_VERSION_TAG'"
 echo "****************************************************************"
 
-############################################
+#############################################################################
 # Setup tools and platforms
 
 GREP=grep
@@ -106,11 +103,11 @@ INTEL_COMPILER=$("${CXX}" --version 2>&1 | "${GREP}" -i -c "icc")
 MACPORTS_COMPILER=$("${CXX}" --version 2>&1 | "${GREP}" -i -c "MacPorts")
 CLANG_COMPILER=$("${CXX}" --version 2>&1 | "${GREP}" -i -c "clang")
 
-############################################
+#############################################################################
 
 # CPU is logical count, memory is in MiB. Low resource boards have
-#   fewer than 4 cores and 1GB or less memory. We use this to
-#   determine if we can build in parallel without an OOM kill.
+#  fewer than 4 cores and 1GB or less memory. We use this to
+#  determine if we can build in parallel without an OOM kill.
 CPU_COUNT=1
 MEM_SIZE=512
 
@@ -128,7 +125,7 @@ elif [[ "$IS_SOLARIS" -ne "0" ]]; then
 fi
 
 # Some ARM devboards cannot use 'make -j N', even with multiple cores and RAM
-#  An 8-core Cubietruck Plus with 2GB RAM experiences OOM kills with '-j 2'.
+# An 8-core Cubietruck Plus with 2GB RAM experiences OOM kills with '-j 2'.
 HAVE_SWAP=1
 if [[ "$IS_LINUX" -ne "0" ]]; then
 	if [[ -e "/proc/meminfo" ]]; then
@@ -145,8 +142,8 @@ if [[ "$CPU_COUNT" -ge "2" && "$MEM_SIZE" -ge "1280" && "$HAVE_SWAP" -ne "0" ]];
 	MAKEARGS=(-j "$CPU_COUNT")
 fi
 
-###############################################################################
-###############################################################################
+#############################################################################
+#############################################################################
 
 "${MAKE}" distclean &>/dev/null && cleanup &>/dev/null
 git checkout master -f &>/dev/null
