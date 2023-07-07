@@ -404,27 +404,40 @@ set(cryptopp_HEADERS_TEST bench.h factory.h validate.h)
 list(
   REMOVE_ITEM
   cryptopp_SOURCES
-  $cryptlib.cpp
+  cryptlib.cpp
   cpu.cpp
   integer.cpp
   pch.cpp
   simple.cpp)
 set(cryptopp_SOURCES cryptlib.cpp cpu.cpp integer.cpp ${cryptopp_SOURCES})
 
+# Build the sources lists with full paths
 set(sources_tmp)
 foreach(src ${cryptopp_SOURCES})
-  list(APPEND sources_tmp "${CRYPTOPP_PROJECT_DIR}/${src}")
+  list(APPEND sources_tmp "${cryptopp_SOURCE_DIR}/${src}")
 endforeach()
 set(cryptopp_SOURCES ${sources_tmp})
 
 set(sources_tmp)
 foreach(src ${cryptopp_SOURCES_TEST})
-  list(APPEND sources_tmp "${CRYPTOPP_PROJECT_DIR}/${src}")
+  list(APPEND sources_tmp "${cryptopp_SOURCE_DIR}/${src}")
 endforeach()
 set(cryptopp_SOURCES_TEST ${sources_tmp})
 
 set(sources_tmp)
 foreach(src ${cryptopp_HEADERS})
-  list(APPEND sources_tmp "${CRYPTOPP_PROJECT_DIR}/${src}")
+  list(APPEND sources_tmp "${cryptopp_SOURCE_DIR}/${src}")
 endforeach()
 set(cryptopp_HEADERS ${sources_tmp})
+
+# Initially we start with an empty list for ASM sources. It will be populated
+# based on the compiler, target architecture and whether the user requested to
+# disable ASM or not.
+set(cryptopp_SOURCES_ASM)
+
+# Adjust for Android
+if(ANDROID)
+  include_directories(${ANDROID_NDK}/sources/android/cpufeatures)
+  list(APPEND cryptopp_SOURCES
+       ${ANDROID_NDK}/sources/android/cpufeatures/cpu-features.c)
+endif()

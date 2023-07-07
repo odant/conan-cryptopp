@@ -16,6 +16,10 @@ cmake_minimum_required(VERSION ${CRYPTOPP_MINIMUM_CMAKE_VERSION})
 # that come with CMake.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+# Setup our override file, in which we may cleanup cmake's default compiler
+# options, based on what we are doing.
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "ResetInitialCompilerOptions")
+
 # ------------------------------------------------------------------------------
 # Project description and (meta) information
 # ------------------------------------------------------------------------------
@@ -28,32 +32,42 @@ if(NOT GIT_SHA1)
   set(GIT_REV "0")
 endif()
 
-# Meta information about the project
-# cmake-format: off
-set(META_PROJECT_NAME        "cryptopp")
+set(META_PROJECT_NAME        "cryptopp-cmake")
 set(META_PROJECT_DESCRIPTION "Free C++ class library of cryptographic schemes")
 set(META_GITHUB_REPO         "https://github.com/weidai11/cryptopp")
 set(META_VERSION_MAJOR       "8")
-set(META_VERSION_MINOR       "7")
+set(META_VERSION_MINOR       "8")
 set(META_VERSION_PATCH       "0")
 set(META_VERSION_REVISION    "${GIT_REV}")
 set(META_VERSION             "${META_VERSION_MAJOR}.${META_VERSION_MINOR}.${META_VERSION_PATCH}")
 set(META_NAME_VERSION        "${META_PROJECT_NAME} v${META_VERSION} (${META_VERSION_REVISION})")
+# ------------------------------------------------------------------------------
+# Project Declaration
+# ------------------------------------------------------------------------------
+
+# Declare project
+project("${META_PROJECT_NAME}"
+  VERSION "${META_VERSION}"
+  DESCRIPTION "${META_PROJECT_DESCRIPTION}"
+  HOMEPAGE_URL "${META_GITHUB_REPO}"
+  LANGUAGES CXX C ASM)
+
 # cmake-format: on
 
-string(MAKE_C_IDENTIFIER ${META_PROJECT_NAME} META_PROJECT_ID)
-string(TOUPPER ${META_PROJECT_ID} META_PROJECT_ID)
-
-# Set the CRYPTOPP_VERSION to be the same as what was downloaded with CPM,
-# FetchContent, git clone, etc...
-set(CRYPTOPP_VERSION ${META_VERSION})
-
-message("=> Project : ${META_NAME_VERSION}")
+message("=> Project : ${PROJECT_NAME} v${cryptopp-cmake_VERSION}")
 
 # ============================================================================
 # Settable options
 # ============================================================================
 
+function (cryptopp_deprecated_option old_name new_name description default)
+	if (DEFINED ${old_name})
+		message (DEPRECATION "${old_name} is a deprecated option and will be ignored after 8.8.x + 3. Use ${new_name} instead")
+		set (default ${${old_name}})
+	endif()
+
+	option (${new_name} ${description} ${default})
+endfunction()
 option(
   CRYPTOPP_USE_INTERMEDIATE_OBJECTS_TARGET
   "Use a common intermediate objects target for the static and shared library targets"
@@ -76,44 +90,43 @@ endif()
 if(CRYPTOPP_SOURCES)
   set(CRYPTOPP_SOURCES
       ${CRYPTOPP_SOURCES}
-      CACHE PATH
-            "Use the provided location for crypto++ sources; do not fetch")
+      CACHE PATH "Use the provided location for crypto++ sources; do not fetch")
 else()
   set(CRYPTOPP_SOURCES
       ""
-      CACHE PATH
-            "Use the provided location for crypto++ sources; do not fetch")
+      CACHE PATH "Use the provided location for crypto++ sources; do not fetch")
 endif()
 
-option(
+cryptopp_deprecated_option(
   USE_OPENMP
+  CRYPTOPP_USE_OPENMP
   "Enable OpenMP to parallelize some of the algorithms. Note that this isn't always faster, see https://www.cryptopp.com/wiki/OpenMP"
   OFF)
 
 # These are IA-32 options.
-option(DISABLE_ASM "Disable ASM" OFF)
-option(DISABLE_SSSE3 "Disable SSSE3" OFF)
-option(DISABLE_SSE4 "Disable SSE4" OFF)
-option(DISABLE_AESNI "Disable AES-NI" OFF)
-option(DISABLE_CLMUL "Disable CLMUL" OFF)
-option(DISABLE_SHA "Disable SHA" OFF)
-option(DISABLE_AVX "Disable AVX" OFF)
-option(DISABLE_AVX2 "Disable AVX2" OFF)
+cryptopp_deprecated_option(DISABLE_ASM CRYPTOPP_DISABLE_ASM "Disable ASM" OFF)
+cryptopp_deprecated_option(DISABLE_SSSE3 CRYPTOPP_DISABLE_SSSE3 "Disable SSSE3" OFF)
+cryptopp_deprecated_option(DISABLE_SSE4 CRYPTOPP_DISABLE_SSE4 "Disable SSE4" OFF)
+cryptopp_deprecated_option(DISABLE_AESNI CRYPTOPP_DISABLE_AESNI "Disable AES-NI" OFF)
+cryptopp_deprecated_option(DISABLE_CLMUL CRYPTOPP_DISABLE_CLMUL "Disable CLMUL" OFF)
+cryptopp_deprecated_option(DISABLE_SHA CRYPTOPP_DISABLE_SHA "Disable SHA" OFF)
+cryptopp_deprecated_option(DISABLE_AVX CRYPTOPP_DISABLE_AVX "Disable AVX" OFF)
+cryptopp_deprecated_option(DISABLE_AVX2 CRYPTOPP_DISABLE_AVX2 "Disable AVX2" OFF)
 
 # These are ARM A-32 options
-option(DISABLE_ARM_NEON "Disable NEON" OFF)
+cryptopp_deprecated_option(DISABLE_ARM_NEON CRYPTOPP_DISABLE_ARM_NEON "Disable NEON" OFF)
 
 # These are Aarch64 options
-option(DISABLE_ARM_AES "Disable ASIMD" OFF)
-option(DISABLE_ARM_AES "Disable AES" OFF)
-option(DISABLE_ARM_PMULL "Disable PMULL" OFF)
-option(DISABLE_ARM_SHA "Disable SHA" OFF)
+cryptopp_deprecated_option(DISABLE_ARM_AES CRYPTOPP_DISABLE_ARM_AES "Disable ASIMD" OFF)
+cryptopp_deprecated_option(DISABLE_ARM_AES CRYPTOPP_DISABLE_ARM_AES "Disable AES" OFF)
+cryptopp_deprecated_option(DISABLE_ARM_PMULL CRYPTOPP_DISABLE_ARM_PMULL "Disable PMULL" OFF)
+cryptopp_deprecated_option(DISABLE_ARM_SHA CRYPTOPP_DISABLE_ARM_SHA "Disable SHA" OFF)
 
 # These are PowerPC options
-option(DISABLE_ALTIVEC "Disable Altivec" OFF)
-option(DISABLE_POWER7 "Disable POWER7" OFF)
-option(DISABLE_POWER8 "Disable POWER8" OFF)
-option(DISABLE_POWER9 "Disable POWER9" OFF)
+cryptopp_deprecated_option(DISABLE_ALTIVEC CRYPTOPP_DISABLE_ALTIVEC "Disable Altivec" OFF)
+cryptopp_deprecated_option(DISABLE_POWER7 CRYPTOPP_DISABLE_POWER7 "Disable POWER7" OFF)
+cryptopp_deprecated_option(DISABLE_POWER8 CRYPTOPP_DISABLE_POWER8 "Disable POWER8" OFF)
+cryptopp_deprecated_option(DISABLE_POWER9 CRYPTOPP_DISABLE_POWER9 "Disable POWER9" OFF)
 
 option(CRYPTOPP_USE_MASTER_BRANCH
        "Get crypto++ from the master branch, not from a release tag" FALSE)
@@ -144,17 +157,30 @@ if(${CRYPTOPP_BUILD_SHARED})
   )
 endif()
 
-# ------------------------------------------------------------------------------
-# Project Declaration
-# ------------------------------------------------------------------------------
+if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
+  set (CRYPTOPP_DEFAULT_BUILD_TYPE "Debug")
+else()
+  set (CRYPTOPP_DEFAULT_BUILD_TYPE "Release")
+endif (EXISTS "${CMAKE_SOURCE_DIR}/.git")
 
-# Declare project
-project(
-  ${META_PROJECT_NAME}
-  VERSION "${META_VERSION}"
-  DESCRIPTION "${META_PROJECT_DESCRIPTION}"
-  HOMEPAGE_URL "${META_GITHUB_REPO}"
-  LANGUAGES CXX C)
+# Set the possible values of build type for cmake-gui
+if (CMAKE_CONFIGURATION_TYPES)
+  set (CMAKE_CONFIGURATION_TYPES "Debug;Release"
+       CACHE STRING
+       "Semicolon separated list of supported configuration types, only supports debug and release, anything else will be ignored"
+       FORCE)
+
+  set_property (CACHE CMAKE_CONFIGURATION_TYPES
+                PROPERTY STRINGS
+                "Debug" "Release")
+endif()
+
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message (STATUS "Setting build type to '${CRYPTOPP_DEFAULT_BUILD_TYPE}' as none was specified.")
+
+  set (CMAKE_BUILD_TYPE "${CRYPTOPP_DEFAULT_BUILD_TYPE}" CACHE STRING
+       "Choose the type of build." FORCE)
+endif()
 
 # ---- Speedup build using ccache (needs CPM) ----
 include(cmake/FasterBuild.cmake)
@@ -163,15 +189,15 @@ include(cmake/FasterBuild.cmake)
 # Fetch / Find crypto++
 # ------------------------------------------------------------------------------
 
-# If CMake is invoked with an explicit option (CRYPTOPP_PROJECT_DIR), setting
+# If CMake is invoked with an explicit option (cryptopp_SOURCE_DIR), setting
 # the location for user-provided sources of crypto++, or if the automatic
 # download fails, we use that option value to find the sources.
+find_package(Git)
 
 if(NOT CRYPTOPP_SOURCES)
   include(GetCryptoppSources)
-  get_cryptopp_sources()
-  if(EXISTS ${CRYPTOPP_PROJECT_DIR})
-    message(STATUS "Crypto++ auto fetched at: ${CRYPTOPP_PROJECT_DIR}")
+  if(EXISTS ${cryptopp_SOURCE_DIR})
+    message(STATUS "Crypto++ auto fetched at: ${cryptopp_SOURCE_DIR}")
   else()
     message(FATAL_ERROR "Crypto++ auto fetch failed; cannot continue!")
   endif()
@@ -179,7 +205,7 @@ else()
   if(EXISTS ${CRYPTOPP_SOURCES})
     message(
       STATUS "Crypto++ from user-specified location at: ${CRYPTOPP_SOURCES}")
-    set(CRYPTOPP_PROJECT_DIR ${CRYPTOPP_SOURCES})
+    set(cryptopp_SOURCE_DIR ${CRYPTOPP_SOURCES})
   else()
     message(
       FATAL_ERROR
@@ -187,6 +213,16 @@ else()
     )
   endif()
 endif()
+
+if (Git_FOUND)
+  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+                  WORKING_DIRECTORY ${cryptopp-cmake_SOURCE_DIR}
+                  OUTPUT_VARIABLE cryptopp_GIT_BRANCH)
+  string(STRIP ${cryptopp_GIT_BRANCH} cryptopp_GIT_BRANCH)
+else()
+  set(cryptopp_GIT_BRANCH "master")
+endif()
+message(STATUS "Using branch ${cryptopp_GIT_BRANCH} for tests")
 
 # ------------------------------------------------------------------------------
 # Testing

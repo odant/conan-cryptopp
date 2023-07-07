@@ -17,6 +17,12 @@ set(archdetect_c_code
 #    error cmake_ARCH arm
 #  endif
 
+#elif defined(__CYGWIN__)
+    #error cmake_ARCH cygwin
+#elif defined(__MINGW64__)
+    #error cmake_ARCH mingw64
+#elif defined(__MINGW32__)
+    #error cmake_ARCH mingw32
 #elif defined(__i386) || defined(__i386__) || defined(_M_IX86)
     #error cmake_ARCH i386
 #elif defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(_M_X64)
@@ -61,6 +67,8 @@ function(target_architecture output_var)
         set(osx_arch_x86_64 TRUE)
       elseif("${osx_arch}" STREQUAL "ppc64" AND ppc_support)
         set(osx_arch_ppc64 TRUE)
+      elseif("${osx_arch}" STREQUAL "arm64")
+        set(osx_arch_arm64 TRUE)
       else()
         message(FATAL_ERROR "Invalid OS X arch name: ${osx_arch}")
       endif()
@@ -81,6 +89,10 @@ function(target_architecture output_var)
 
     if(osx_arch_ppc64)
       list(APPEND ARCH ppc64)
+    endif()
+
+    if(osx_arch_arm64)
+      list(APPEND ARCH arm64)
     endif()
   else()
     file(WRITE "${CMAKE_BINARY_DIR}/arch.c" "${archdetect_c_code}")
