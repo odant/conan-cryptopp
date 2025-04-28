@@ -1,7 +1,7 @@
 diff --git a/src/cryptopp/CMakeLists.txt b/src/cryptopp/CMakeLists.txt
 index 1dea197..f10fea5 100644
---- a/src/cryptopp/CMakeLists.txt
-+++ b/src/cryptopp/CMakeLists.txt
+--- a/cryptopp/CMakeLists.txt
++++ b/cryptopp/CMakeLists.txt
 @@ -321,15 +321,12 @@ endif()
  
  # ##############################################################################
@@ -22,8 +22,8 @@ index 1dea197..f10fea5 100644
      check_include_file_cxx("winapifamily.h" HAVE_WINAPIFAMILY_H)
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
 index bb3bfbb..3309deb 100644
---- a/src/CMakeLists.txt
-+++ b/src/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
 @@ -247,26 +247,26 @@ else()
      endif()
  endif()
