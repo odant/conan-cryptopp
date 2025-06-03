@@ -1,5 +1,5 @@
 from conan import ConanFile, tools
-import os
+import os, platform
 
 class CryptoppConan(ConanFile):
     name = "cryptopp"
@@ -24,9 +24,6 @@ class CryptoppConan(ConanFile):
     def layout(self):
         tools.cmake.cmake_layout(self, src_folder="src");
 
-    def isClangClToolset(self):
-        return True if self.settings.os == "Windows" and self.settings.compiler == "msvc" and str(self.settings.compiler.toolset).lower() == "clangcl" else False
-    
     def config_options(self):
         if self.settings.os == "Windows":
             del self.options.fPIC
@@ -38,8 +35,6 @@ class CryptoppConan(ConanFile):
         # Only C++11
         if self.settings.compiler.get_safe("libcxx") == "libstdc++":
             raise Exception("This package is only compatible with libstdc++11")
-        if self.isClangClToolset():
-            self.options.ninja = False
 
     def build_requirements(self):
         if self.options.ninja:
@@ -47,8 +42,8 @@ class CryptoppConan(ConanFile):
             
     def source(self):
         tools.files.patch(self, patch_file="cmake.patch")
-        #if self.settings.os == "Windows":
-        #    tools.patch(patch_file="allow_clang-cl.patch")
+        if platform.system() == "Windows":
+            tools.files.patch(self, patch_file="allow_clang-cl.patch")
         
     def generate(self):
         benv = tools.env.VirtualBuildEnv(self)
@@ -64,6 +59,7 @@ class CryptoppConan(ConanFile):
         tc.variables["BUILD_STATIC"] = "ON"
         tc.variables["BUILD_SHARED"] = "OFF"
         tc.variables["BUILD_TESTING"] = "OFF"
+        tc.variables["CRYPTOPP_SOURCES"] = self.source_folder.replace("\\", "/")
         tc.generate()
         
     def build(self):
